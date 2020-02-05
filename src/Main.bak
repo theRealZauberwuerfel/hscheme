@@ -1,0 +1,76 @@
+module Main where
+
+import Control.Monad
+import Control.Monad.Except
+import Control.Monad.Trans
+import Control.Monad.Trans.Except
+
+import Data.IORef
+
+import System.Console.Haskeline
+import System.Environment
+import System.IO hiding (try)
+
+import Text.ParserCombinators.Parsec hiding (spaces)
+
+import LispTypes
+
+type Repl a = InputT IO a
+
+main :: IO ()
+main = do
+    args <- getArgs
+    if null args
+      -- then runInputT defaultSettings runRepl
+      then runRepl
+      else runOne $ args
+
+liftThrows :: ThrowsError a -> IOThrowsError a
+liftThrows (Left err) = throwError err
+liftThrows (Right val) = return val
+
+primitives :: [(String, [LispVal] -> ThrowsError LispVal)]
+primitives = [("+", numericBinop (+)),
+              ("-", numericBinop (-)),
+              ("*", numericBinop (*)),
+              ("/", numericBinop div),
+              ("mod", numericBinop mod),
+              ("quotient", numericBinop quot),
+              ("remainder", numericBinop rem),
+              ("=", numBoolBinop (==)),
+              ("<", numBoolBinop (<)),
+              (">", numBoolBinop (>)),
+              ("/=", numBoolBinop (/=)),
+              (">=", numBoolBinop (>=)),
+              ("<=", numBoolBinop (<=)),
+              ("&&", boolBoolBinop (&&)),
+              ("||", boolBoolBinop (||)),
+              ("string=?", strBoolBinop (==)),
+              ("string?", strBoolBinop (>)),
+              ("string<=?", strBoolBinop (<=)),
+              ("string>=?", strBoolBinop (>=)),
+              ("car", car),
+              ("cdr", cdr),
+              ("cons", cons),
+              ("eq?", eqv),
+              ("eqv?", eqv),
+              ("equal?", equal)]
+
+boolBinop :: (LispVal -> ThrowsError a)
+          -> (a -> a -> Bool) -> [LispVal]
+          -> ThrowsError LispVal
+boolBinop unpacker op args =
+    if length args /= 2
+      then throwError $ NumArgs 2 args
+      else do
+        left <- unpacker $ args !! 0
+        right <- unpacker $ args !! 1
+        return $ Bool $ left `op` right
+
+numBoolBinop = boolBinop unpackNum
+strBoolBinop = boolBinop unpackStr
+boolBoolBinop = boolBinop unpackBool
+
+numericBinop :: (Integer -> Integer -> Integer) -> [LispVal] -> ThrowsError LispVal
+numericBinop op singleVal@[_] = throwError $ NumArgs 2 singleVal
+numericBinop op params = mapM unpackNum params >>= return . Number . foldl1 op

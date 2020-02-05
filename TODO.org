@@ -1,0 +1,19 @@
+
+- [X] Modularize the code.
+- [ ] Make *all* imports/exports explicit
+- [ ] Use Text/ByteString instead of String
+- [ ] Use pragma -XNoImplicitPrelude in hscheme.cabal
+
+- [ ] Make Haskeline work. (or Repline from Stephen Diehl)
+
+- [ ] Implement macro expansion. (see macroexpansion.scm)
+  - [ ] Read macros
+  - [ ] static macros
+  - [ ] recursive macros
+
+- [ ] Write more basic Scheme procedures.
+- [ ] Call CommonLisp with ZeroMQ to get macroexpansion for free
+
+- [ ] write `require`
+- [ ] write `defpackage`
+- [ ] 
